@@ -57,4 +57,4 @@ Confirm with `yes` to delete the tags/manifests (or provide argument `--yes` to 
 
 ### Large Repositories
 
-Regmaid needs to make two requests against the registry for every tag in the repository. One for reading the manifest and one for reading the config blob. For large repositories this would mean a ton of requests. Configure rate-limiting accordlingy for the registry (`maxConcurrentRequests`, `maxRequestsPerSecond`).
+Regmaid needs to make two requests against the registry for every tag in the repository. One for reading the manifest and one for reading the config blob. For large repositories this would mean a ton of requests. Configure rate-limiting accordingly for the registry (`maxConcurrentRequests`, `maxRequestsPerSecond`).
