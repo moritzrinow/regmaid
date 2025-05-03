@@ -24,7 +24,12 @@ go install github.com/moritzrinow/regmaid@latest
 
 You can also run regmaid with Docker (coming soon):
 ```sh
-docker run -it -v /path/to/regmaid.yaml:/regmaid/regmaid.yaml ghcr.io/moritzrinow/regmaid:latest
+docker run -it -v /path/to/regmaid.yaml:/etc/regmaid/regmaid.yaml ghcr.io/moritzrinow/regmaid:latest
+```
+
+Running as automated jobs with auto-confirm:
+```sh
+docker run -it -v /path/to/regmaid.yaml:/etc/regmaid/regmaid.yaml ghcr.io/moritzrinow/regmaid:latest --yes
 ```
 
 ### Configuration
@@ -49,7 +54,7 @@ policies:
 
 ### Cleaning Registry
 
-Run command `regmaid clean`, which will output all tags eligible for deletion according to the configured policies.
+Run command `regmaid`, which will output all tags eligible for deletion according to the configured policies.
 
 Confirm with `yes` to delete the tags/manifests (or provide argument `--yes` to auto-confirm).
 

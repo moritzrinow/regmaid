@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/regclient/regclient/types/ref"
-	"github.com/spf13/cobra"
 	str2duration "github.com/xhit/go-str2duration/v2"
 )
 
@@ -20,22 +19,6 @@ var (
 	Yes    bool
 	DryRun bool
 )
-
-var cleanCmd = &cobra.Command{
-	Use:   "clean",
-	Short: "Clean registries",
-	Long:  "Clean registries based on configured policies",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return ExecuteClean(cmd.Context())
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(cleanCmd)
-
-	cleanCmd.PersistentFlags().BoolVarP(&Yes, "yes", "y", false, "Auto confirm cleanup")
-	cleanCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "", false, "Dry run (only list tags eligible for deletion)")
-}
 
 type PolicyResult struct {
 	Error     error
@@ -104,7 +87,8 @@ func ExecuteClean(ctx context.Context) error {
 			})
 
 			// Always keep N newest tags
-			result.Manifests = result.Manifests[result.Policy.Keep:]
+			keep := min(result.Policy.Keep, len(result.Manifests))
+			result.Manifests = result.Manifests[keep:]
 
 			filtered := []Manifest{}
 
