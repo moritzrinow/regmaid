@@ -22,7 +22,7 @@ You can install regmaid with Go:
 go install github.com/moritzrinow/regmaid@latest
 ```
 
-You can also run regmaid with Docker (coming soon):
+You can also run regmaid with Docker:
 ```sh
 docker run -it -v /path/to/regmaid.yaml:/etc/regmaid/regmaid.yaml ghcr.io/moritzrinow/regmaid:latest
 ```
