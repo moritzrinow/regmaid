@@ -12,7 +12,7 @@ COPY internal/regmaid/ ./internal/regmaid
 
 RUN CGO_ENABLED=0 go build -o /regmaid/regmaid .
 
-FROM busybox:1.36
+FROM alpine:3.17.0
 
 WORKDIR /regmaid
 
