@@ -27,6 +27,7 @@ metadata:
   name: regmaid
 spec:
   concurrencyPolicy: Forbid
+  schedule: '0 0 * * *' # Run every night at 12am
   jobTemplate:
     spec:
       template:
