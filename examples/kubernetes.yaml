@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: regmaid
+data:
+  regmaid.yaml: |
+    registries:
+      - name: dev
+        host: registry.com
+    policies:
+      - name: my-app
+        registry: dev
+        repository: my-app
+        keep: 10
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry
+data:
+  username: my-user
+  password: my-password
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: regmaid
+spec:
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          volumes:
+            - name: config
+              configMap:
+                name: regmaid
+          containers:
+            - name: regmaid
+              image: ghcr.io/moritzrinow/regmaid:0.2
+              args:
+                - '--yes'
+                - '--dry-run' # Remove to actually run deletion
+              volumeMounts:
+                - name: config
+                  subPath: regmaid.yaml
+                  mountPath: /etc/regmaid/regmaid.yaml
+              env:
+                - name: DEV_USERNAME # DEV is the name of the registry in uppercase
+                  valueFrom:
+                    secretKeyRef:
+                      name: registry
+                      key: username
+                - name: DEV_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: registry
+                      key: password 
+

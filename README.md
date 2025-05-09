@@ -58,6 +58,12 @@ Run command `regmaid`, which will output all tags eligible for deletion accordin
 
 Confirm with `yes` to delete the tags/manifests (or provide argument `--yes` to auto-confirm).
 
+### Running CronJob on Kubernetes
+
+Since Regmaid is available as a Docker image, it can also be run periodically as a [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) on Kubernetes.
+
+See [kubernetes.yaml](examples/kubernetes.yaml) for an example.
+
 ## Limitations
 
 ### Large Repositories
