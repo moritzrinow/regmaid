@@ -53,7 +53,9 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %v", err)
 	}
 
-	for _, r := range cfg.Registries {
+	for i := range cfg.Registries {
+		r := &cfg.Registries[i]
+
 		if user, exists := os.LookupEnv(fmt.Sprintf("%s_USERNAME", strings.ToUpper(r.Name))); exists {
 			r.Username = user
 		}
