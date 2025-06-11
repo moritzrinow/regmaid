@@ -71,27 +71,32 @@ func (r *RegMaid) DeleteManifests(ctx context.Context, repo string, digests []st
 
 // Get a list of all repositories matching with the specified match.
 func (r *RegMaid) GetRepositories(ctx context.Context, host string, match string) ([]string, error) {
-    rl, err := r.client.RepoList(ctx, host)
-    if err != nil {
-        return nil, fmt.Errorf("error listing repositories for host %s: %v", host, err)
-    }
+	// If the repository name is an exact match and not a wildcard expression, we short circuit to avoid calling the _catalog API
+	if !strings.Contains(match, "*") {
+		return []string{match}, nil
+	}
 
-    repos, err := rl.GetRepos()
-    if err != nil {
-        return nil, fmt.Errorf("error extracting repositories for host %s: %v", host, err)
-    }
+	rl, err := r.client.RepoList(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("error listing repositories for host %s: %v", host, err)
+	}
+
+	repos, err := rl.GetRepos()
+	if err != nil {
+		return nil, fmt.Errorf("error extracting repositories for host %s: %v", host, err)
+	}
 
 	regex, err := getRegex(match, false)
 	if err != nil {
 		return nil, err
 	}
 
-    filteredRepos := make([]string, 0)
-    for _, repo := range repos {
-        if regex.MatchString(repo) {
-            filteredRepos = append(filteredRepos, repo)
-        }
-    }
+	filteredRepos := make([]string, 0)
+	for _, repo := range repos {
+		if regex.MatchString(repo) {
+			filteredRepos = append(filteredRepos, repo)
+		}
+	}
 
 	return filteredRepos, nil
 }
@@ -119,7 +124,7 @@ func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string,
 
 	var wg sync.WaitGroup
 
-	opts := []scheme.TagOpts{}
+	var opts []scheme.TagOpts
 
 	tagList, err := r.client.TagList(ctx, repoRef, opts...)
 
@@ -191,7 +196,7 @@ func getRegex(match string, isRegex bool) (*regexp.Regexp, error) {
 		isRegex = false
 		match = "*"
 	}
-	
+
 	if isRegex {
 		return regexp.Compile(match)
 	} else {

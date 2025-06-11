@@ -49,8 +49,10 @@ func ExecuteClean(ctx context.Context) error {
 
 	// Process policies
 	for _, policy := range cfg.Policies {
-
 		reg := getRegistry(cfg, &policy)
+		if reg == nil {
+			panic("registry was not found")
+		}
 
 		var retention time.Duration
 
@@ -61,12 +63,14 @@ func ExecuteClean(ctx context.Context) error {
 			}
 		}
 
-		fmt.Printf("Processing policy %q...\n", policy.Name)
-
 		repos, err := maid.GetRepositories(ctx, reg.Host, policy.Repository)
 		if err != nil {
 			fmt.Printf("Error getting repositories for policy %q: %v\n", policy.Name, err)
 			return err
+		}
+
+		if len(repos) > 1 {
+			fmt.Printf("Found %d repos for policy %q.\n", len(repos), policy.Name)
 		}
 
 		for _, repoName := range repos {
@@ -75,11 +79,11 @@ func ExecuteClean(ctx context.Context) error {
 			go func(repoName string) {
 				defer wg.Done()
 
-				fmt.Printf("Processing repository %q\n", repoName)
-
 				repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, repoName))
 
-				total, manifests, err := maid.ScanRepository(ctx, repo.CommonName(), policy.Match, policy.Regex)
+				fmt.Printf("Scanning %q for policy %q...\n", repo.Reference, policy.Name)
+
+				total, manifests, err := maid.ScanRepository(ctx, repo.Reference, policy.Match, policy.Regex)
 
 				result := &PolicyResult{
 					TotalTags:  total,
@@ -102,7 +106,7 @@ func ExecuteClean(ctx context.Context) error {
 				keep := min(result.Policy.Keep, len(result.Manifests))
 				result.Manifests = result.Manifests[keep:]
 
-				filtered := []Manifest{}
+				var filtered []Manifest
 
 				// Filter for tags after retention period
 				for _, m := range result.Manifests {
@@ -118,10 +122,10 @@ func ExecuteClean(ctx context.Context) error {
 				results = append(results, result)
 
 				lock.Unlock()
+
+				fmt.Printf("Finished scanning %q for policy %q.\n", repo.Reference, policy.Name)
 			}(repoName)
 		}
-
-		fmt.Printf("Finished processing policy %q\n", policy.Name)
 	}
 
 	// Wait for all policies to finish processing
@@ -141,23 +145,24 @@ func ExecuteClean(ctx context.Context) error {
 	}
 
 	if fail {
-		return fmt.Errorf("One or more policies finished with an error, therefore exiting.")
+		return fmt.Errorf("one or more policies finished with an error, therefore exiting")
 	}
 
 	total := 0
 
 	for _, result := range results {
+		repoRef, _ := ref.New(fmt.Sprintf("%s/%s", result.Registry.Host, result.Repository))
+
 		if len(result.Manifests) > 0 {
 			total += len(result.Manifests)
 
-			fmt.Printf("Policy %q found %d/%d tags eligible for deletion:\n", result.Policy.Name, len(result.Manifests), result.TotalTags)
+			fmt.Printf("Policy %q found %d/%d tags eligible for deletion in %q:\n", result.Policy.Name, len(result.Manifests), result.TotalTags, repoRef.Reference)
 
 			for _, m := range result.Manifests {
-				fmt.Printf("%s:%s (%s) (%dd)\n", result.Repository, m.Tag, m.Digest, int(m.Age.Hours()/24))
+				fmt.Printf("%s (%s) (%dd)\n", m.Tag, m.Digest, int(m.Age.Hours()/24))
 			}
 		} else {
-
-			fmt.Printf("Policy %q found 0/%d tags eligible for deletion.\n", result.Policy.Name, result.TotalTags)
+			fmt.Printf("Policy %q found 0/%d tags eligible for deletion in %q.\n", result.Policy.Name, result.TotalTags, repoRef.Reference)
 		}
 	}
 

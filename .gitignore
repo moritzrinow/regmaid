@@ -24,7 +24,7 @@ go.work.sum
 # env file
 .env
 
-# local config
-regmaid.local.yaml
+local/
+.idea/
 
 regmaid
