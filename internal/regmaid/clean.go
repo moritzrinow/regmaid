@@ -68,7 +68,7 @@ func ExecuteClean(ctx context.Context) error {
 
 			fmt.Printf("Processing policy %q...\n", policy.Name)
 
-			total, manifests, err := maid.ScanRepository(ctx, repo.CommonName(), policy.Match)
+			total, manifests, err := maid.ScanRepository(ctx, repo.CommonName(), policy.Match, policy.Regex)
 
 			result := &PolicyResult{
 				TotalTags: total,

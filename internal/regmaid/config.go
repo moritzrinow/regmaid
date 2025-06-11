@@ -35,6 +35,7 @@ type Policy struct {
 	Registry   string `yaml:"registry"`
 	Repository string `yaml:"repository"`
 	Match      string `yaml:"match"`
+	Regex	   bool   `yaml:"regex"`
 	Keep       int    `yaml:"keep"`
 	Retention  string `yaml:"retention"`
 	Force      bool   `yaml:"force"`
