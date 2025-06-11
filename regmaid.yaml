@@ -31,7 +31,7 @@ registries:
 policies:
   - name: dev-images # Name of the policy
     registry: registry # Name of the registry this policy applies to
-    repository: my-repository # Name of the repository this policy applies to
+    repository: my-repository # Name of the repository this policy applies to (supports wildcards)
     match: *-dev # Wildcard expression for matching tags this policy applies to
     regex: false # Whether the match is a regex (false by default)
     retention: 30d # Remove tags older than 30 days
