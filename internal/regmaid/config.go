@@ -31,13 +31,14 @@ type Registry struct {
 }
 
 type Policy struct {
-	Name       string `yaml:"name"`
-	Registry   string `yaml:"registry"`
-	Repository string `yaml:"repository"`
-	Match      string `yaml:"match"`
-	Keep       int    `yaml:"keep"`
-	Retention  string `yaml:"retention"`
-	Force      bool   `yaml:"force"`
+	Name        string `yaml:"name"`
+	Registry    string `yaml:"registry"`
+	Repository  string `yaml:"repository"`
+	Match       string `yaml:"match"`
+	Regex	    bool   `yaml:"regex"`
+	Keep        int    `yaml:"keep"`
+	Retention   string `yaml:"retention"`
+	Force       bool   `yaml:"force"`
 }
 
 func LoadConfig(path string) (*Config, error) {

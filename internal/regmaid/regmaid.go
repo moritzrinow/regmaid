@@ -69,15 +69,42 @@ func (r *RegMaid) DeleteManifests(ctx context.Context, repo string, digests []st
 	return nil
 }
 
+// Get a list of all repositories matching with the specified match.
+func (r *RegMaid) GetRepositories(ctx context.Context, host string, match string) ([]string, error) {
+    rl, err := r.client.RepoList(ctx, host)
+    if err != nil {
+        return nil, fmt.Errorf("error listing repositories for host %s: %v", host, err)
+    }
+
+    repos, err := rl.GetRepos()
+    if err != nil {
+        return nil, fmt.Errorf("error extracting repositories for host %s: %v", host, err)
+    }
+
+	regex, err := getRegex(match, false)
+	if err != nil {
+		return nil, err
+	}
+
+    filteredRepos := make([]string, 0)
+    for _, repo := range repos {
+        if regex.MatchString(repo) {
+            filteredRepos = append(filteredRepos, repo)
+        }
+    }
+
+	return filteredRepos, nil
+}
+
 // Scans all tagged manifests of the repository and returns the ones matching the specified filter.
-func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string) (int, []Manifest, error) {
+func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string, isRegex bool) (int, []Manifest, error) {
 	repoRef, err := ref.New(repo)
 	if err != nil {
 
 		return 0, nil, err
 	}
 
-	regex, err := getRegex(match)
+	regex, err := getRegex(match, isRegex)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -159,14 +186,18 @@ func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string)
 	return totalTags, tags, nil
 }
 
-func getRegex(match string) (*regexp.Regexp, error) {
+func getRegex(match string, isRegex bool) (*regexp.Regexp, error) {
 	if match == "" {
+		isRegex = false
 		match = "*"
 	}
-
-	regexStr := "^" + regexp.QuoteMeta(match) + "$"
-	regexStr = strings.ReplaceAll(regexStr, "\\*", ".*")
-	regexStr = strings.ReplaceAll(regexStr, "\\?", ".")
-
-	return regexp.Compile(regexStr)
+	
+	if isRegex {
+		return regexp.Compile(match)
+	} else {
+		regexStr := "^" + regexp.QuoteMeta(match) + "$"
+		regexStr = strings.ReplaceAll(regexStr, "\\*", ".*")
+		regexStr = strings.ReplaceAll(regexStr, "\\?", ".")
+		return regexp.Compile(regexStr)
+	}
 }

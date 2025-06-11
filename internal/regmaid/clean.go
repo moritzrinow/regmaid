@@ -21,11 +21,12 @@ var (
 )
 
 type PolicyResult struct {
-	Error     error
-	Policy    *Policy
-	Registry  *Registry
-	Manifests []Manifest
-	TotalTags int
+	Error      error
+	Policy     *Policy
+	Registry   *Registry
+	Manifests  []Manifest
+	Repository string
+	TotalTags  int
 }
 
 func ExecuteClean(ctx context.Context) error {
@@ -48,67 +49,79 @@ func ExecuteClean(ctx context.Context) error {
 
 	// Process policies
 	for _, policy := range cfg.Policies {
-		wg.Add(1)
 
-		go func() {
-			defer wg.Done()
+		reg := getRegistry(cfg, &policy)
 
-			reg := getRegistry(cfg, &policy)
+		var retention time.Duration
 
-			repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, policy.Repository))
+		if policy.Retention != "" {
+			duration, err := str2duration.ParseDuration(policy.Retention)
+			if err == nil {
+				retention = duration
+			}
+		}
 
-			var retention time.Duration
+		fmt.Printf("Processing policy %q...\n", policy.Name)
 
-			if policy.Retention != "" {
-				duration, err := str2duration.ParseDuration(policy.Retention)
-				if err == nil {
-					retention = duration
+		repos, err := maid.GetRepositories(ctx, reg.Host, policy.Repository)
+		if err != nil {
+			fmt.Printf("Error getting repositories for policy %q: %v\n", policy.Name, err)
+			return err
+		}
+
+		for _, repoName := range repos {
+			wg.Add(1)
+
+			go func(repoName string) {
+				defer wg.Done()
+
+				fmt.Printf("Processing repository %q\n", repoName)
+
+				repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, repoName))
+
+				total, manifests, err := maid.ScanRepository(ctx, repo.CommonName(), policy.Match, policy.Regex)
+
+				result := &PolicyResult{
+					TotalTags:  total,
+					Policy:     &policy,
+					Registry:   reg,
+					Manifests:  manifests,
+					Repository: repoName,
 				}
-			}
 
-			fmt.Printf("Processing policy %q...\n", policy.Name)
-
-			total, manifests, err := maid.ScanRepository(ctx, repo.CommonName(), policy.Match)
-
-			result := &PolicyResult{
-				TotalTags: total,
-				Policy:    &policy,
-				Registry:  reg,
-				Manifests: manifests,
-			}
-
-			if err != nil {
-				result.Error = err
-			}
-
-			// Sort tags by age (ascending)
-			slices.SortFunc(result.Manifests, func(a, b Manifest) int {
-				return cmp.Compare(a.Age, b.Age)
-			})
-
-			// Always keep N newest tags
-			keep := min(result.Policy.Keep, len(result.Manifests))
-			result.Manifests = result.Manifests[keep:]
-
-			filtered := []Manifest{}
-
-			// Filter for tags after retention period
-			for _, m := range result.Manifests {
-				if m.Age >= retention {
-					filtered = append(filtered, m)
+				if err != nil {
+					result.Error = err
 				}
-			}
 
-			result.Manifests = filtered
+				// Sort tags by age (ascending)
+				slices.SortFunc(result.Manifests, func(a, b Manifest) int {
+					return cmp.Compare(a.Age, b.Age)
+				})
 
-			lock.Lock()
+				// Always keep N newest tags
+				keep := min(result.Policy.Keep, len(result.Manifests))
+				result.Manifests = result.Manifests[keep:]
 
-			results = append(results, result)
+				filtered := []Manifest{}
 
-			lock.Unlock()
+				// Filter for tags after retention period
+				for _, m := range result.Manifests {
+					if m.Age >= retention {
+						filtered = append(filtered, m)
+					}
+				}
 
-			fmt.Printf("Finished processing policy %q\n", policy.Name)
-		}()
+				result.Manifests = filtered
+
+				lock.Lock()
+
+				results = append(results, result)
+
+				lock.Unlock()
+			}(repoName)
+		}
+
+		fmt.Printf("Finished processing policy %q\n", policy.Name)
 	}
 
 	// Wait for all policies to finish processing
@@ -140,7 +153,7 @@ func ExecuteClean(ctx context.Context) error {
 			fmt.Printf("Policy %q found %d/%d tags eligible for deletion:\n", result.Policy.Name, len(result.Manifests), result.TotalTags)
 
 			for _, m := range result.Manifests {
-				fmt.Printf("%s (%s) (%dd)\n", m.Tag, m.Digest, int(m.Age.Hours()/24))
+				fmt.Printf("%s:%s (%s) (%dd)\n", result.Repository, m.Tag, m.Digest, int(m.Age.Hours()/24))
 			}
 		} else {
 
@@ -187,7 +200,7 @@ func ExecuteClean(ctx context.Context) error {
 
 			reg := getRegistry(cfg, result.Policy)
 
-			repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, result.Policy.Repository))
+			repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, result.Repository))
 
 			digestsMap := make(map[string]any)
 
