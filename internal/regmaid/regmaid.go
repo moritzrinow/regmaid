@@ -20,7 +20,7 @@ type RegMaid struct {
 
 type Manifest struct {
 	Digest string
-	Tag    string
+	Tags   []string
 	Age    time.Duration
 }
 
@@ -168,9 +168,11 @@ func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string,
 
 					age := time.Now().Sub(*created)
 
+					tag := m.GetRef().Tag
+
 					tc <- Manifest{
 						Digest: m.GetDescriptor().Digest.String(),
-						Tag:    m.GetRef().Tag,
+						Tags:   []string{tag},
 						Age:    age,
 					}
 				}
@@ -188,7 +190,31 @@ func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string,
 		tags = append(tags, t)
 	}
 
-	return totalTags, tags, nil
+	manifests := make(map[string]*Manifest)
+
+	// Build distinct list of manifests and N tags
+	for _, t := range tags {
+		tag := t.Tags[0]
+		if m, ok := manifests[t.Digest]; ok {
+			m.Tags = append(m.Tags, tag)
+		} else {
+			m := Manifest{
+				Digest: t.Digest,
+				Age:    t.Age,
+				Tags:   []string{tag},
+			}
+
+			manifests[t.Digest] = &m
+		}
+	}
+
+	res := make([]Manifest, 0)
+
+	for _, m := range manifests {
+		res = append(res, *m)
+	}
+
+	return totalTags, res, nil
 }
 
 func getRegex(match string, isRegex bool) (*regexp.Regexp, error) {

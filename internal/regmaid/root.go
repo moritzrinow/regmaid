@@ -13,9 +13,9 @@ const defaultConfigPath = "regmaid.yaml"
 
 var rootCmd = &cobra.Command{
 	Use:   "regmaid",
-	Short: "Enforce tag retention policies on Docker registries",
+	Short: "Enforce image retention policies on Docker registries",
 	Long: `
-Regmaid is a CLI tool that deletes image tags in Docker registries based on retention policies.
+Regmaid is a CLI tool that deletes image manifests in Docker registries based on retention policies.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return ExecuteClean(cmd.Context())
@@ -27,10 +27,10 @@ func init() {
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
-	rootCmd.PersistentFlags().StringVarP(&ConfigPath, "config", "c", "regmaid.yaml", "Path to the config file")
+	rootCmd.PersistentFlags().StringVarP(&ConfigPath, "config", "c", defaultConfigPath, "Path to the config file")
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&Yes, "yes", "y", false, "Auto confirm cleanup")
-	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "", false, "Dry run (only list tags eligible for deletion)")
+	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "", false, "Dry run (only list images eligible for deletion)")
 }
 
 func Execute() error {

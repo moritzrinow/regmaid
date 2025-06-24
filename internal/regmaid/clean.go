@@ -156,17 +156,17 @@ func ExecuteClean(ctx context.Context) error {
 		if len(result.Manifests) > 0 {
 			total += len(result.Manifests)
 
-			fmt.Printf("Policy %q found %d/%d tags eligible for deletion in %q:\n", result.Policy.Name, len(result.Manifests), result.TotalTags, repoRef.Reference)
+			fmt.Printf("Policy %q found %d images eligible for deletion in %q (scanned %d tags):\n", result.Policy.Name, len(result.Manifests), repoRef.Reference, result.TotalTags)
 
 			for _, m := range result.Manifests {
-				fmt.Printf("%s (%s) (%dd)\n", m.Tag, m.Digest, int(m.Age.Hours()/24))
+				fmt.Printf("%s (%dd) (%v\n", m.Digest, int(m.Age.Hours()/24), m.Tags)
 			}
 		} else {
-			fmt.Printf("Policy %q found 0/%d tags eligible for deletion in %q.\n", result.Policy.Name, result.TotalTags, repoRef.Reference)
+			fmt.Printf("Policy %q found 0 images eligible for deletion in %q (scanned %d tags).\n", result.Policy.Name, repoRef.Reference, result.TotalTags)
 		}
 	}
 
-	fmt.Printf("Total tags to be deleted: %d\n", total)
+	fmt.Printf("Total images to be deleted: %d\n", total)
 
 	if DryRun {
 		return nil
@@ -207,18 +207,10 @@ func ExecuteClean(ctx context.Context) error {
 
 			repo, _ := ref.New(fmt.Sprintf("%s/%s", reg.Host, result.Repository))
 
-			digestsMap := make(map[string]any)
-
-			for _, m := range result.Manifests {
-				if _, ok := digestsMap[m.Digest]; !ok {
-					digestsMap[m.Digest] = nil
-				}
-			}
-
 			digests := make([]string, 0)
 
-			for d := range digestsMap {
-				digests = append(digests, d)
+			for _, m := range result.Manifests {
+				digests = append(digests, m.Digest)
 			}
 
 			err := maid.DeleteManifests(ctx, repo.CommonName(), digests)
