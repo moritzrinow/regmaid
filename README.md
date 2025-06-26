@@ -48,8 +48,8 @@ policies:
     registry: dev
     repository: example-app # Policies may target a single repository, or multiple via wildcard expression
     match: *-dev # Match tags ending with '-dev'
-    retention: 30d # Delete tags older than 30 days
-    keep: 5 # Always keep at least newest 5 tags
+    retention: 30d # Delete images older than 30 days
+    keep: 5 # Always keep at least newest 5 images
 ```
 
 ### Cleaning Registry

@@ -39,7 +39,7 @@ spec:
                 name: regmaid
           containers:
             - name: regmaid
-              image: ghcr.io/moritzrinow/regmaid:0.2
+              image: ghcr.io/moritzrinow/regmaid:latest # Use actual version number here
               args:
                 - '--yes'
                 - '--dry-run' # Remove to actually run deletion
