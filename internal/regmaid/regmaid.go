@@ -159,12 +159,17 @@ func (r *RegMaid) ScanRepository(ctx context.Context, repo string, match string,
 					ociConfig, err := r.client.BlobGetOCIConfig(ctx, repoRef, imgConf)
 
 					if err != nil {
-						fmt.Printf("Unable to determine age of manifest %s: %v\n", m.GetRef().CommonName(), err)
+						fmt.Printf("Unable to read OCI config blob for %s: %v\n", m.GetRef().CommonName(), err)
 
 						return
 					}
 
 					created := ociConfig.GetConfig().Created
+					if created == nil {
+						fmt.Printf("Unable to determine age of manifest %s due to missing 'created' property\n", m.GetRef().CommonName())
+
+						return
+					}
 
 					age := time.Now().Sub(*created)
 
